@@ -13,6 +13,8 @@ dist/
 # Env / secrets
 .env
 *.pem
+backend/secrets/
+/devcast-night-labs.*.private-key.pem
 
 # OS
 .DS_Store
