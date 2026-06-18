@@ -82,37 +82,63 @@ function NotionCard({
   connected: boolean;
   onChange: () => void;
 }) {
+  const [showToken, setShowToken] = useState(false);
   const [token, setToken] = useState("");
-  const save = useMutation({
+
+  const connect = useMutation({
+    mutationFn: async () =>
+      (await api.get<{ url: string }>("/api/integrations/notion/oauth/url")).data,
+    onSuccess: (d) => (location.href = d.url),
+    onError: (e: any) =>
+      alert(e.response?.data?.detail || "Notion OAuth не сконфигурирован на сервере"),
+  });
+
+  const saveToken = useMutation({
     mutationFn: async () =>
       (await api.post("/api/integrations/notion", { token })).data,
     onSuccess: () => {
       setToken("");
+      setShowToken(false);
       onChange();
     },
     onError: () => alert("Неверный Notion-токен"),
   });
+
   return (
     <Shell
       icon="📝"
       title="Notion"
-      desc="Internal integration token. Дайте интеграции доступ к нужным страницам в Notion."
+      desc="Авторизуйтесь через Notion — выберите свой workspace и страницы. Без вставки токенов."
       connected={connected}
     >
-      <input
-        className="input mb-2"
-        type="password"
-        value={token}
-        onChange={(e) => setToken(e.target.value)}
-        placeholder={connected ? "обновить токен (secret_…)" : "secret_…"}
-      />
-      <button
-        disabled={!token || save.isPending}
-        onClick={() => save.mutate()}
-        className="btn-ghost w-full"
-      >
-        {connected ? "Обновить токен" : "Подключить"}
+      <button onClick={() => connect.mutate()} className="btn-primary w-full">
+        {connected ? "Переподключить Notion" : "Подключить Notion"}
       </button>
+
+      <button
+        onClick={() => setShowToken((v) => !v)}
+        className="mt-2 text-xs text-[var(--color-muted)] hover:text-slate-300"
+      >
+        {showToken ? "Скрыть" : "Или вставить internal token (для разработки)"}
+      </button>
+      {showToken && (
+        <div className="mt-2">
+          <input
+            className="input mb-2"
+            type="password"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="secret_…"
+          />
+          <button
+            disabled={!token || saveToken.isPending}
+            onClick={() => saveToken.mutate()}
+            className="btn-ghost w-full"
+          >
+            Сохранить токен
+          </button>
+        </div>
+      )}
     </Shell>
   );
 }

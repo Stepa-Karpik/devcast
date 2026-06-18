@@ -81,10 +81,16 @@ cloudflared tunnel --url http://localhost:8000     # без аккаунта
 
 Без туннеля можно работать через кнопку **«Sync now»** (поллинг) в разделе «Репозитории».
 
-### Notion
-Создайте internal integration (https://www.notion.so/my-integrations), скопируйте токен
-(`secret_…`) и **дайте интеграции доступ к нужным страницам** в Notion (Share → Connect).
-Вставьте токен в приложении на вкладке «Интеграции».
+### Notion (OAuth, мультиюзер)
+Создайте **public OAuth integration**: https://www.notion.so/profile/integrations → New
+connection → Authentication method **OAuth**, Installable in **Any workspace**, Redirect URI
+`${PUBLIC_BASE_URL}/api/integrations/notion/callback` (+ localhost-вариант для dev).
+Capabilities: Read / Insert / Update content. Скопируйте client id/secret в
+`NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET`.
+
+Пользователь подключает Notion кнопкой «Подключить Notion» на вкладке «Интеграции» —
+каждый авторизует свой workspace, токены не вводятся. Internal token остаётся опциональным
+fallback для локальной разработки (`NOTION_DEFAULT_TOKEN` или поле в UI).
 
 ### Google Calendar (опционально)
 Заполните `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, redirect URI:

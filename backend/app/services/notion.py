@@ -1,12 +1,54 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 from datetime import datetime
+from urllib.parse import urlencode
 
 import httpx
 
+from app.config import settings
+
 NOTION_API = "https://api.notion.com/v1"
 NOTION_VERSION = "2022-06-28"
+
+
+def _redirect_uri() -> str:
+    return f"{settings.public_base_url}/api/integrations/notion/callback"
+
+
+def oauth_url(state: str) -> str:
+    params = {
+        "client_id": settings.notion_client_id,
+        "response_type": "code",
+        "owner": "user",
+        "redirect_uri": _redirect_uri(),
+        "state": state,
+    }
+    return f"{NOTION_API}/oauth/authorize?{urlencode(params)}"
+
+
+async def oauth_exchange_code(code: str) -> dict:
+    """Exchange the OAuth code for a workspace access token (HTTP Basic with client creds)."""
+    basic = base64.b64encode(
+        f"{settings.notion_client_id}:{settings.notion_client_secret}".encode()
+    ).decode()
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            f"{NOTION_API}/oauth/token",
+            headers={
+                "Authorization": f"Basic {basic}",
+                "Content-Type": "application/json",
+                "Notion-Version": NOTION_VERSION,
+            },
+            json={
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": _redirect_uri(),
+            },
+        )
+        resp.raise_for_status()
+        return resp.json()
 
 # Notion enforces ~3 requests/sec — serialize writes through this semaphore.
 _rate = asyncio.Semaphore(3)

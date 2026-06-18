@@ -11,7 +11,7 @@ from app.crypto import encrypt_json
 from app.db import get_db
 from app.models import Integration, User
 from app.schemas.integration import IntegrationOut, NotionConnectIn, NotionTargetOut
-from app.services import github_app
+from app.services import github_app, notion as notion_svc
 from app.services.credentials import get_integration_credentials, get_notion_token
 from app.services.notion import NotionClient
 
@@ -121,7 +121,42 @@ async def github_repos(
     return repos
 
 
-# ---------- Notion ----------
+# ---------- Notion (OAuth) ----------
+
+
+@router.get("/notion/oauth/url")
+async def notion_oauth_url(user: User = Depends(get_current_user)):
+    if not settings.notion_client_id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Notion OAuth not configured")
+    return {"url": notion_svc.oauth_url(state=str(user.id))}
+
+
+@router.get("/notion/callback")
+async def notion_oauth_callback(
+    code: str, state: str, db: AsyncSession = Depends(get_db)
+):
+    import uuid as _uuid
+
+    try:
+        user_id = _uuid.UUID(state)
+    except ValueError:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bad state")
+
+    token_data = await notion_svc.oauth_exchange_code(code)
+    access_token = token_data.get("access_token")
+    if not access_token:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Notion OAuth failed")
+    meta = {
+        "workspace_name": token_data.get("workspace_name"),
+        "workspace_id": token_data.get("workspace_id"),
+        "workspace_icon": token_data.get("workspace_icon"),
+        "bot_id": token_data.get("bot_id"),
+    }
+    await _upsert_integration(db, user_id, "notion", {"token": access_token}, meta)
+    return RedirectResponse(f"{settings.frontend_base_url}/integrations?notion=connected")
+
+
+# ---------- Notion (internal-token fallback, local dev) ----------
 
 
 @router.post("/notion", response_model=IntegrationOut)

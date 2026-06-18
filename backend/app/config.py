@@ -30,7 +30,9 @@ class Settings(BaseSettings):
     github_app_private_key_path: str = ""
 
     # Notion
-    notion_default_token: str = ""
+    notion_client_id: str = ""
+    notion_client_secret: str = ""
+    notion_default_token: str = ""  # optional internal-token fallback for local dev
 
     # Google
     google_client_id: str = ""
