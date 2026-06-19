@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #0a0b12;
-  --color-panel: #14161f;
-  --color-panel-2: #1b1e2b;
-  --color-line: #262a3a;
-  --color-accent: #7c5cff;
-  --color-accent-2: #18d2a8;
-  --color-muted: #8a8fa3;
+  --color-ink: #0a0a0a;
+  --color-panel: #111111;
+  --color-panel-2: #181818;
+  --color-line: #262626;
+  --color-accent: #fafafa;
+  --color-accent-2: #a3a3a3;
+  --color-muted: #777777;
 }
 
 :root {
@@ -22,34 +22,32 @@ body,
 
 body {
   margin: 0;
-  background:
-    radial-gradient(1200px 600px at 80% -10%, rgba(124, 92, 255, 0.18), transparent),
-    radial-gradient(900px 500px at -10% 10%, rgba(24, 210, 168, 0.12), transparent),
-    var(--color-ink);
-  color: #e8eaf2;
+  background: var(--color-ink);
+  color: #ededed;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-[var(--color-line)] bg-[var(--color-panel)]/80 backdrop-blur;
+    @apply rounded-2xl border border-[var(--color-line)] bg-[var(--color-panel)];
   }
   .btn,
   .btn-primary,
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition active:scale-[.98] disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition active:scale-[.98] disabled:opacity-40;
   }
   .btn-primary {
-    @apply bg-[var(--color-accent)] text-white hover:brightness-110 shadow-[0_8px_24px_-8px_rgba(124,92,255,.7)];
+    @apply bg-white text-black hover:bg-white/90;
   }
   .btn-ghost {
-    @apply border border-[var(--color-line)] bg-[var(--color-panel-2)] text-slate-200 hover:border-[var(--color-accent)]/60;
+    @apply border border-[var(--color-line)] bg-[var(--color-panel-2)] text-slate-200 hover:border-white/40;
   }
   .input {
-    @apply w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-panel-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]/70 placeholder:text-slate-500;
+    @apply w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-panel-2)] px-3 py-2 text-sm outline-none focus:border-white/40 placeholder:text-neutral-600;
   }
   .label {
-    @apply mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--color-muted)];
+    @apply mb-1 block text-[11px] font-medium uppercase tracking-wider text-[var(--color-muted)];
   }
   .badge {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;

@@ -19,6 +19,7 @@ async def get_arq_pool():
 class WorkerSettings:
     functions = [
         tasks.process_commit,
+        tasks.send_commit_to_notion,
         tasks.profile_repo,
         tasks.poll_repos,
         tasks.baseline_repo,

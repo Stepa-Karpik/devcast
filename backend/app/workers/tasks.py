@@ -42,7 +42,9 @@ def _trim_diff(diff: str) -> str:
     return "\n".join(kept)
 
 
-async def process_commit(ctx, commit_id: str) -> None:
+async def process_commit(ctx, commit_id: str, distribute: bool = True) -> None:
+    """Humanize a commit. distribute=False humanizes only (no Notion/Calendar) — used
+    when a developer manually processes an archived commit."""
     async with SessionLocal() as db:
         commit = await db.get(Commit, commit_id)
         if commit is None or commit.status == "processed":
@@ -86,9 +88,10 @@ async def process_commit(ctx, commit_id: str) -> None:
             commit.status = "processed"
             await db.commit()
 
-            if repo.sync_frequency == "realtime":
-                await _sync_commit_to_notion(db, commit, change, repo)
-            await _push_to_google_calendar(db, commit, change, repo)
+            if distribute:
+                if repo.sync_frequency == "realtime":
+                    await _sync_commit_to_notion(db, commit, change, repo)
+                await _push_to_google_calendar(db, commit, change, repo)
 
             await publish(
                 str(repo.user_id),
@@ -126,11 +129,13 @@ async def _push_to_google_calendar(
 
     try:
         integ = await get_google_integration(db, repo.user_id)
-        cal_id = (integ.meta or {}).get("calendar_id") if integ else None
+        meta = (integ.meta or {}) if integ else {}
+        cal_name = meta.get("calendar_name") or "DevCast"
+        cal_id = meta.get("calendar_id")
         if not cal_id:
-            cal_id = await gcal.ensure_calendar(access, "Инновиум")
+            cal_id = await gcal.ensure_calendar(access, cal_name)
             if integ is not None:
-                integ.meta = {**(integ.meta or {}), "calendar_id": cal_id}
+                integ.meta = {**meta, "calendar_id": cal_id}
                 await db.commit()
 
         repo_url = f"https://github.com/{repo.github_full_name}"
@@ -226,6 +231,23 @@ async def profile_repo(ctx, repository_id: str) -> None:
             log.exception("profile_repo failed for %s", repository_id)
 
 
+async def send_commit_to_notion(ctx, commit_id: str) -> None:
+    """Manually mirror an already-processed commit to Notion (e.g. an archived one)."""
+    async with SessionLocal() as db:
+        commit = await db.get(Commit, commit_id)
+        if commit is None or commit.synced_to_notion:
+            return
+        repo = await db.get(Repository, commit.repository_id)
+        change = await db.scalar(select(Change).where(Change.commit_id == commit.id))
+        if repo is None or change is None:
+            return
+        await _sync_commit_to_notion(db, commit, change, repo)
+        await publish(
+            str(repo.user_id),
+            {"type": "commit.synced", "commit_id": str(commit.id)},
+        )
+
+
 async def baseline_repo(ctx, repository_id: str) -> int:
     """Record existing commits silently (status='skipped') so only future commits
     get humanized. Used when a repo is connected with tracking_mode='fresh'."""
@@ -266,7 +288,7 @@ async def baseline_repo(ctx, repository_id: str) -> int:
                             (cd.get("author") or {}).get("date")
                         ),
                         status="skipped",
-                        synced_to_notion=True,  # never mirror baseline commits
+                        synced_to_notion=False,  # archived: not in Notion until sent manually
                     )
                 )
                 recorded += 1

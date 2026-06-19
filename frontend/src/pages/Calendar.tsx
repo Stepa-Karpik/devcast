@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { PageHeader } from "../components/Layout";
+import { fmtTime } from "../lib/time";
 
 interface DayBucket {
   date: string;
@@ -42,7 +43,7 @@ export default function Calendar() {
     <div>
       <PageHeader
         title="Календарь активности"
-        subtitle="Все коммиты по датам и времени"
+        subtitle="Коммиты по датам и времени"
         action={
           <div className="flex items-center gap-2">
             <button
@@ -62,84 +63,97 @@ export default function Calendar() {
         }
       />
 
-      <div className="card p-4">
-        <div className="mb-2 grid grid-cols-7 gap-2 text-center text-xs text-[var(--color-muted)]">
-          {WEEKDAYS.map((w) => (
-            <div key={w}>{w}</div>
-          ))}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        {/* Calendar grid (left) */}
+        <div className="card p-4">
+          <div className="mb-2 grid grid-cols-7 gap-2 text-center text-xs text-[var(--color-muted)]">
+            {WEEKDAYS.map((w) => (
+              <div key={w}>{w}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-2">
+            {cells.map((cell, i) => {
+              if (!cell) return <div key={i} />;
+              const iso = toISO(cell);
+              const bucket = byDate[iso];
+              const count = bucket?.commits.length || 0;
+              const repos = bucket
+                ? [...new Set(bucket.commits.map((c) => c.repo.split("/").pop() || c.repo))]
+                : [];
+              const isPicked = picked === iso;
+              return (
+                <button
+                  key={i}
+                  onClick={() => count && setPicked(iso)}
+                  className={`flex aspect-square flex-col gap-1 overflow-hidden rounded-xl border p-2 text-left transition ${
+                    isPicked
+                      ? "border-white/60 bg-[var(--color-panel-2)]"
+                      : count
+                        ? "border-[var(--color-line)] bg-[var(--color-panel-2)] hover:border-white/40"
+                        : "border-[var(--color-line)]/40 text-neutral-600"
+                  }`}
+                >
+                  <span className="text-xs">{cell.getDate()}</span>
+                  {count > 0 && (
+                    <>
+                      <span className="inline-flex w-fit items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white">
+                        {count} ●
+                      </span>
+                      <span className="hidden truncate text-[10px] leading-tight text-[var(--color-muted)] sm:block">
+                        {repos.slice(0, 2).join(", ")}
+                        {repos.length > 2 ? ` +${repos.length - 2}` : ""}
+                      </span>
+                    </>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <div className="grid grid-cols-7 gap-2">
-          {cells.map((cell, i) => {
-            if (!cell) return <div key={i} />;
-            const iso = cell.toISOString().slice(0, 10);
-            const bucket = byDate[iso];
-            const count = bucket?.commits.length || 0;
-            const repos = bucket
-              ? [...new Set(bucket.commits.map((c) => c.repo.split("/").pop() || c.repo))]
-              : [];
-            return (
-              <button
-                key={i}
-                onClick={() => count && setPicked(iso)}
-                className={`flex aspect-square flex-col gap-1 overflow-hidden rounded-xl border p-2 text-left transition ${
-                  count
-                    ? "border-[var(--color-accent)]/40 bg-[var(--color-panel-2)] hover:border-[var(--color-accent)]"
-                    : "border-[var(--color-line)]/50 text-slate-500"
-                }`}
-              >
-                <span className="text-xs">{cell.getDate()}</span>
-                {count > 0 && (
-                  <>
-                    <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--color-accent)]/20 px-2 py-0.5 text-[10px] text-[var(--color-accent)]">
-                      {count} ●
-                    </span>
-                    <span className="hidden truncate text-[10px] leading-tight text-[var(--color-muted)] sm:block">
-                      {repos.slice(0, 2).join(", ")}
-                      {repos.length > 2 ? ` +${repos.length - 2}` : ""}
-                    </span>
-                  </>
-                )}
-              </button>
-            );
-          })}
+
+        {/* Detail panel (right) */}
+        <div className="card p-5 lg:sticky lg:top-6 lg:h-fit">
+          {pickedBucket ? (
+            <>
+              <h3 className="mb-4 font-semibold capitalize">
+                {new Date(picked!).toLocaleDateString("ru-RU", {
+                  day: "numeric",
+                  month: "long",
+                })}
+                <span className="ml-2 text-sm font-normal text-[var(--color-muted)]">
+                  {pickedBucket.commits.length} коммит(ов)
+                </span>
+              </h3>
+              <ul className="space-y-3">
+                {pickedBucket.commits.map((c) => (
+                  <li key={c.id} className="border-l border-[var(--color-line)] pl-3">
+                    <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
+                      <span>{fmtTime(c.time)}</span>
+                      <code>{c.sha}</code>
+                    </div>
+                    <div className="mt-0.5 text-xs text-white/80">{c.repo}</div>
+                    <div className="mt-0.5 text-sm">{c.message}</div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <div className="grid h-40 place-items-center text-center text-sm text-[var(--color-muted)]">
+              Выберите день с активностью,
+              <br />
+              чтобы увидеть коммиты
+            </div>
+          )}
         </div>
       </div>
-
-      {pickedBucket && (
-        <div className="card mt-4 p-5">
-          <h3 className="mb-3 font-semibold">
-            {new Date(picked!).toLocaleDateString("ru-RU", {
-              day: "numeric",
-              month: "long",
-            })}
-            {" — "}
-            {pickedBucket.commits.length} коммит(ов)
-          </h3>
-          <ul className="space-y-2.5">
-            {pickedBucket.commits.map((c) => (
-              <li key={c.id} className="flex items-start gap-3 text-sm">
-                <span className="mt-0.5 w-12 shrink-0 text-xs text-[var(--color-muted)]">
-                  {new Date(c.time).toLocaleTimeString("ru-RU", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="badge bg-[var(--color-panel-2)] text-[var(--color-accent-2)]">
-                      {c.repo}
-                    </span>
-                    <code className="text-xs text-[var(--color-muted)]">{c.sha}</code>
-                  </div>
-                  <div className="mt-0.5">{c.message}</div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
+}
+
+function toISO(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
 }
 
 // Monday-first month grid with leading/trailing blanks.
@@ -147,7 +161,7 @@ function buildMonth(monthStart: Date): (Date | null)[] {
   const year = monthStart.getFullYear();
   const month = monthStart.getMonth();
   const first = new Date(year, month, 1);
-  const lead = (first.getDay() + 6) % 7; // Monday = 0
+  const lead = (first.getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const cells: (Date | null)[] = [];
   for (let i = 0; i < lead; i++) cells.push(null);

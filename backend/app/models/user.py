@@ -15,3 +15,4 @@ class User(Base, TimestampMixin):
     email: Mapped[str] = mapped_column(unique=True, index=True)
     password_hash: Mapped[str] = mapped_column()
     display_name: Mapped[str | None] = mapped_column(default=None)
+    timezone: Mapped[str] = mapped_column(default="Europe/Moscow")

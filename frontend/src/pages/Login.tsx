@@ -30,14 +30,10 @@ export default function Login() {
   return (
     <div className="grid min-h-screen place-items-center p-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <img
-            src={logos.devcast}
-            alt="DevCast"
-            className="mx-auto mb-4 h-16 w-16"
-          />
-          <h1 className="text-2xl font-bold">DevCast</h1>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <img src={logos.devcast} alt="DevCast" className="mb-4 h-14 w-14" />
+          <img src={logos.devcastText} alt="DevCast" className="h-8 w-auto" />
+          <p className="mt-3 text-sm text-[var(--color-muted)]">
             Прямая трансляция разработки человеческим языком
           </p>
         </div>

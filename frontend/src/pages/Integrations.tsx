@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type Integration } from "../api/client";
 import { PageHeader } from "../components/Layout";
@@ -120,6 +121,7 @@ function NotionCard({
 }
 
 function GoogleCard({ connected }: { connected: boolean }) {
+  const qc = useQueryClient();
   const connect = useMutation({
     mutationFn: async () =>
       (await api.get<{ url: string }>("/api/calendar/oauth/url")).data,
@@ -127,14 +129,64 @@ function GoogleCard({ connected }: { connected: boolean }) {
     onError: (e: any) =>
       alert(e.response?.data?.detail || "Google не сконфигурирован на сервере"),
   });
+
+  const settings = useQuery({
+    queryKey: ["calendar-settings"],
+    queryFn: async () =>
+      (await api.get<{ calendar_name: string }>("/api/calendar/settings")).data,
+  });
+  const [name, setName] = useState("");
+  const saveName = useMutation({
+    mutationFn: async () =>
+      (await api.put("/api/calendar/settings", { calendar_name: name })).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["calendar-settings"] });
+      alert("Название календаря сохранено");
+    },
+  });
+  const currentName = settings.data?.calendar_name || "DevCast";
+
   return (
-    <Card
-      logo={logos.google}
-      title="Google Calendar"
-      desc="Коммиты попадают в отдельный календарь «Инновиум»: заголовок, ссылка на репозиторий и описание."
-      connected={connected}
-      onClick={() => connect.mutate()}
-      cta={connected ? "Переподключить" : "Подключить Google"}
-    />
+    <div className="card flex flex-col p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="grid h-12 w-12 place-items-center rounded-xl bg-[var(--color-panel-2)]">
+          <img src={logos.google} alt="Google" className="h-7 w-7 object-contain" />
+        </div>
+        {connected ? (
+          <span className="badge bg-white/10 text-white">подключено</span>
+        ) : (
+          <span className="badge bg-white/5 text-[var(--color-muted)]">не подключено</span>
+        )}
+      </div>
+      <h3 className="font-semibold">Google Calendar</h3>
+      <p className="mt-1 mb-4 flex-1 text-sm text-[var(--color-muted)]">
+        Коммиты попадают в отдельный календарь: заголовок, ссылка на репозиторий и описание.
+      </p>
+
+      {connected && (
+        <div className="mb-3">
+          <label className="label">Название календаря</label>
+          <div className="flex gap-2">
+            <input
+              className="input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={currentName}
+            />
+            <button
+              disabled={!name || saveName.isPending}
+              onClick={() => saveName.mutate()}
+              className="btn-ghost shrink-0 px-3"
+            >
+              ОК
+            </button>
+          </div>
+        </div>
+      )}
+
+      <button onClick={() => connect.mutate()} className="btn-ghost w-full">
+        {connected ? "Переподключить" : "Подключить Google"}
+      </button>
+    </div>
   );
 }

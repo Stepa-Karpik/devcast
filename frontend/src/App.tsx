@@ -7,6 +7,7 @@ import Integrations from "./pages/Integrations";
 import Operator from "./pages/Operator";
 import RepoSettings from "./pages/RepoSettings";
 import Calendar from "./pages/Calendar";
+import Profile from "./pages/Profile";
 
 function Protected({ children }: { children: JSX.Element }) {
   const { user, loading } = useAuth();
@@ -27,6 +28,7 @@ export default function App() {
       <Route path="/operator" element={<Protected><Operator /></Protected>} />
       <Route path="/repos" element={<Protected><RepoSettings /></Protected>} />
       <Route path="/calendar" element={<Protected><Calendar /></Protected>} />
+      <Route path="/profile" element={<Protected><Profile /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

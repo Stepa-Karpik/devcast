@@ -10,8 +10,19 @@ from app.api.deps import get_current_user
 from app.db import get_db
 from app.models import Change, Commit, Repository, User
 from app.schemas.commit import ChangeOut, CommitOut
+from app.workers.queue import get_arq_pool
 
 router = APIRouter(prefix="/api/commits", tags=["commits"])
+
+
+async def _owned_commit(db: AsyncSession, commit_id: uuid.UUID, user: User) -> Commit:
+    commit = await db.get(Commit, commit_id)
+    if not commit:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Commit not found")
+    repo = await db.get(Repository, commit.repository_id)
+    if not repo or repo.user_id != user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Commit not found")
+    return commit
 
 
 async def _user_repo_ids(db: AsyncSession, user: User) -> list[uuid.UUID]:
@@ -53,6 +64,37 @@ async def list_commits(
         )
     }
     return [_to_out(c, changes.get(c.id)) for c in commits]
+
+
+@router.post("/{commit_id}/process")
+async def process_commit_now(
+    commit_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Humanize a commit on demand (e.g. an archived one) WITHOUT sending to Notion."""
+    commit = await _owned_commit(db, commit_id, user)
+    commit.status = "pending"
+    await db.commit()
+    pool = await get_arq_pool()
+    await pool.enqueue_job("process_commit", str(commit.id), distribute=False)
+    await pool.aclose()
+    return {"status": "queued"}
+
+
+@router.post("/{commit_id}/send-to-notion")
+async def send_commit_notion(
+    commit_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    commit = await _owned_commit(db, commit_id, user)
+    if commit.status != "processed":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Commit is not processed yet")
+    pool = await get_arq_pool()
+    await pool.enqueue_job("send_commit_to_notion", str(commit.id))
+    await pool.aclose()
+    return {"status": "queued"}
 
 
 @router.get("/{commit_id}", response_model=CommitOut)

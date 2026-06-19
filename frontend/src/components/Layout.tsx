@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { logos } from "./logos";
@@ -6,7 +6,6 @@ import {
   IconCalendar,
   IconFeed,
   IconIntegrations,
-  IconLogout,
   IconOperator,
   IconRepos,
 } from "./icons";
@@ -20,21 +19,14 @@ const NAV = [
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   return (
     <div className="flex min-h-screen">
       {/* Static sidebar — pinned to the left, always visible while content scrolls. */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-[var(--color-line)] bg-[var(--color-panel)]/40 px-4 py-6 backdrop-blur md:flex">
-        <div className="mb-10 flex items-center gap-3 px-2">
-          <img src={logos.devcast} alt="DevCast" className="h-9 w-9" />
-          <div>
-            <div className="text-[15px] font-semibold leading-tight tracking-tight">
-              DevCast
-            </div>
-            <div className="text-[11px] text-[var(--color-muted)]">
-              live dev translation
-            </div>
-          </div>
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-[var(--color-line)] bg-[var(--color-panel)] px-4 py-6 md:flex">
+        <div className="mb-10 px-2 pt-1">
+          <img src={logos.devcastText} alt="DevCast" className="h-7 w-auto" />
         </div>
 
         <nav className="flex flex-1 flex-col gap-1">
@@ -66,13 +58,17 @@ export function Layout({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="mt-4 border-t border-[var(--color-line)] pt-4">
-          <div className="truncate px-2 text-xs text-slate-300">{user?.email}</div>
           <button
-            onClick={logout}
-            className="mt-2 flex items-center gap-2 px-2 text-xs text-[var(--color-muted)] transition hover:text-white"
+            onClick={() => navigate("/profile")}
+            className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-[var(--color-panel-2)]"
+            title="Профиль"
           >
-            <IconLogout className="h-4 w-4" />
-            Выйти
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--color-panel-2)] text-xs font-semibold uppercase text-slate-300">
+              {(user?.email || "?").slice(0, 1)}
+            </span>
+            <span className="min-w-0 truncate text-xs text-slate-300">
+              {user?.email}
+            </span>
           </button>
         </div>
       </aside>

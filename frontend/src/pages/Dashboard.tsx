@@ -5,12 +5,13 @@ import { PageHeader } from "../components/Layout";
 import { StatusBadge } from "../components/StatusBadge";
 import { CommitModal } from "../components/CommitModal";
 import { Select } from "../components/Select";
+import { fmtShort } from "../lib/time";
 import { useEventStream } from "../api/useEventStream";
 
 export default function Dashboard() {
   const qc = useQueryClient();
   const [repoFilter, setRepoFilter] = useState<string>("");
-  const [selected, setSelected] = useState<Commit | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const repos = useQuery({
     queryKey: ["repos"],
@@ -35,6 +36,11 @@ export default function Dashboard() {
 
   const repoName = (id: string) =>
     repos.data?.find((r) => r.id === id)?.github_full_name || "—";
+
+  const selected = commits.data?.find((c) => c.id === selectedId) || null;
+  const selectedRepo = selected
+    ? repos.data?.find((r) => r.id === selected.repository_id)
+    : undefined;
 
   return (
     <div>
@@ -84,7 +90,7 @@ export default function Dashboard() {
               {commits.data.map((c) => (
                 <tr
                   key={c.id}
-                  onClick={() => setSelected(c)}
+                  onClick={() => setSelectedId(c.id)}
                   className="cursor-pointer border-b border-[var(--color-line)]/60 transition last:border-0 hover:bg-[var(--color-panel-2)]/60"
                 >
                   <td className="px-4 py-3">
@@ -105,14 +111,7 @@ export default function Dashboard() {
                     {repoName(c.repository_id)}
                   </td>
                   <td className="hidden px-4 py-3 text-[var(--color-muted)] sm:table-cell">
-                    {c.committed_at
-                      ? new Date(c.committed_at).toLocaleString("ru-RU", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "—"}
+                    {c.committed_at ? fmtShort(c.committed_at) : "—"}
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={c.status} />
@@ -125,7 +124,11 @@ export default function Dashboard() {
       )}
 
       {selected && (
-        <CommitModal commit={selected} onClose={() => setSelected(null)} />
+        <CommitModal
+          commit={selected}
+          repoHasNotion={!!selectedRepo?.notion_target_id}
+          onClose={() => setSelectedId(null)}
+        />
       )}
     </div>
   );

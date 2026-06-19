@@ -54,6 +54,40 @@ async def calendar_commits(
     return [{"date": day, "commits": items} for day, items in sorted(buckets.items())]
 
 
+@router.get("/settings")
+async def get_calendar_settings(
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    integ = await db.scalar(
+        select(Integration).where(
+            Integration.user_id == user.id, Integration.kind == "google"
+        )
+    )
+    name = (integ.meta or {}).get("calendar_name") if integ else None
+    return {"calendar_name": name or "DevCast", "connected": integ is not None}
+
+
+@router.put("/settings")
+async def set_calendar_settings(
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    name = (body.get("calendar_name") or "").strip() or "DevCast"
+    integ = await db.scalar(
+        select(Integration).where(
+            Integration.user_id == user.id, Integration.kind == "google"
+        )
+    )
+    if not integ:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Google not connected")
+    meta = {**(integ.meta or {}), "calendar_name": name}
+    meta.pop("calendar_id", None)  # force re-resolution with the new name
+    integ.meta = meta
+    await db.commit()
+    return {"calendar_name": name}
+
+
 @router.get("/oauth/url")
 async def google_oauth_url(user: User = Depends(get_current_user)):
     if not settings.google_client_id:

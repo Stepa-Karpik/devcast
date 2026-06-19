@@ -6,12 +6,14 @@ import {
   type ReactNode,
 } from "react";
 import { api, clearToken, getToken, setToken, type User } from "../api/client";
+import { setTimezone } from "../lib/time";
 
 interface AuthCtx {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
+  refresh: () => Promise<void>;
   logout: () => void;
 }
 
@@ -30,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data } = await api.get<User>("/api/auth/me");
       setUser(data);
+      setTimezone(data.timezone);
     } catch {
       clearToken();
     } finally {
@@ -58,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <Ctx.Provider value={{ user, loading, login, register, logout }}>
+    <Ctx.Provider value={{ user, loading, login, register, refresh: loadMe, logout }}>
       {children}
     </Ctx.Provider>
   );

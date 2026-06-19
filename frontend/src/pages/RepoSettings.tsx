@@ -61,6 +61,7 @@ function useBranches(fullName: string, installationId: string | null, enabled: b
 
 export default function RepoSettings() {
   const qc = useQueryClient();
+  const [adding, setAdding] = useState(false);
   const repos = useQuery({
     queryKey: ["repos"],
     queryFn: async () => (await api.get<Repo[]>("/api/repos")).data,
@@ -83,16 +84,26 @@ export default function RepoSettings() {
       <PageHeader
         title="Репозитории"
         subtitle="Привяжите репозитории к страницам Notion и настройте, что и как отслеживать"
+        action={
+          <button onClick={() => setAdding((v) => !v)} className="btn-primary">
+            {adding ? "Отмена" : "+ Подключить репозиторий"}
+          </button>
+        }
       />
-      <AddRepo
-        providers={providers.data || []}
-        targets={targets.data || []}
-        onAdded={invalidate}
-      />
+      {adding && (
+        <AddRepoForm
+          providers={providers.data || []}
+          targets={targets.data || []}
+          onAdded={() => {
+            invalidate();
+            setAdding(false);
+          }}
+        />
+      )}
       <div className="mt-6 space-y-4">
-        {repos.data?.length === 0 && (
+        {repos.data?.length === 0 && !adding && (
           <div className="card p-8 text-center text-[var(--color-muted)]">
-            Пока нет репозиториев. Добавьте первый выше.
+            Пока нет репозиториев. Нажмите «Подключить репозиторий».
           </div>
         )}
         {repos.data?.map((r) => (
@@ -118,7 +129,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function AddRepo({
+function AddRepoForm({
   providers,
   targets,
   onAdded,
@@ -127,11 +138,9 @@ function AddRepo({
   targets: NotionTarget[];
   onAdded: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const ghRepos = useQuery({
     queryKey: ["gh-repos"],
     queryFn: async () => (await api.get<GhRepo[]>("/api/integrations/github/repos")).data,
-    enabled: open,
     retry: false,
   });
 
@@ -171,18 +180,10 @@ function AddRepo({
     },
     onSuccess: () => {
       setSel("");
-      setOpen(false);
       onAdded();
     },
     onError: (e: any) => alert(e.response?.data?.detail || "Не удалось добавить"),
   });
-
-  if (!open)
-    return (
-      <button onClick={() => setOpen(true)} className="btn-primary">
-        + Подключить репозиторий
-      </button>
-    );
 
   const repoOptions: Option[] =
     ghRepos.data?.map((g) => ({
@@ -257,10 +258,7 @@ function AddRepo({
           onClick={() => add.mutate()}
           className="btn-primary"
         >
-          Добавить
-        </button>
-        <button onClick={() => setOpen(false)} className="btn-ghost">
-          Отмена
+          Добавить репозиторий
         </button>
       </div>
     </div>
