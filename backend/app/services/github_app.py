@@ -85,6 +85,30 @@ async def list_installation_repos(installation_id: str) -> list[dict]:
     return repos
 
 
+async def list_branches(installation_id: str, full_name: str) -> list[str]:
+    token = await installation_token(installation_id)
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+    }
+    names: list[str] = []
+    async with httpx.AsyncClient(timeout=30) as client:
+        page = 1
+        while True:
+            resp = await client.get(
+                f"{API}/repos/{full_name}/branches",
+                headers=headers,
+                params={"per_page": 100, "page": page},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            names.extend(b["name"] for b in data)
+            if len(data) < 100:
+                break
+            page += 1
+    return names
+
+
 async def get_commit_diff(installation_id: str, full_name: str, sha: str) -> str:
     """Unified diff of a single commit (changes only, not the whole tree)."""
     token = await installation_token(installation_id)

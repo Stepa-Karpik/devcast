@@ -5,7 +5,13 @@ import { PageHeader } from "../components/Layout";
 
 interface DayBucket {
   date: string;
-  commits: { id: string; sha: string; message: string; time: string }[];
+  commits: {
+    id: string;
+    sha: string;
+    repo: string;
+    message: string;
+    time: string;
+  }[];
 }
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -68,11 +74,14 @@ export default function Calendar() {
             const iso = cell.toISOString().slice(0, 10);
             const bucket = byDate[iso];
             const count = bucket?.commits.length || 0;
+            const repos = bucket
+              ? [...new Set(bucket.commits.map((c) => c.repo.split("/").pop() || c.repo))]
+              : [];
             return (
               <button
                 key={i}
                 onClick={() => count && setPicked(iso)}
-                className={`flex aspect-square flex-col rounded-xl border p-2 text-left transition ${
+                className={`flex aspect-square flex-col gap-1 overflow-hidden rounded-xl border p-2 text-left transition ${
                   count
                     ? "border-[var(--color-accent)]/40 bg-[var(--color-panel-2)] hover:border-[var(--color-accent)]"
                     : "border-[var(--color-line)]/50 text-slate-500"
@@ -80,9 +89,15 @@ export default function Calendar() {
               >
                 <span className="text-xs">{cell.getDate()}</span>
                 {count > 0 && (
-                  <span className="mt-auto inline-flex w-fit items-center gap-1 rounded-full bg-[var(--color-accent)]/20 px-2 py-0.5 text-[10px] text-[var(--color-accent)]">
-                    {count} ●
-                  </span>
+                  <>
+                    <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--color-accent)]/20 px-2 py-0.5 text-[10px] text-[var(--color-accent)]">
+                      {count} ●
+                    </span>
+                    <span className="hidden truncate text-[10px] leading-tight text-[var(--color-muted)] sm:block">
+                      {repos.slice(0, 2).join(", ")}
+                      {repos.length > 2 ? ` +${repos.length - 2}` : ""}
+                    </span>
+                  </>
                 )}
               </button>
             );
@@ -100,17 +115,24 @@ export default function Calendar() {
             {" — "}
             {pickedBucket.commits.length} коммит(ов)
           </h3>
-          <ul className="space-y-2">
+          <ul className="space-y-2.5">
             {pickedBucket.commits.map((c) => (
-              <li key={c.id} className="flex items-center gap-3 text-sm">
-                <span className="text-xs text-[var(--color-muted)]">
+              <li key={c.id} className="flex items-start gap-3 text-sm">
+                <span className="mt-0.5 w-12 shrink-0 text-xs text-[var(--color-muted)]">
                   {new Date(c.time).toLocaleTimeString("ru-RU", {
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
                 </span>
-                <code className="text-xs text-[var(--color-muted)]">{c.sha}</code>
-                <span>{c.message}</span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="badge bg-[var(--color-panel-2)] text-[var(--color-accent-2)]">
+                      {c.repo}
+                    </span>
+                    <code className="text-xs text-[var(--color-muted)]">{c.sha}</code>
+                  </div>
+                  <div className="mt-0.5">{c.message}</div>
+                </div>
               </li>
             ))}
           </ul>

@@ -58,6 +58,35 @@ async def refresh_token(refresh: str) -> dict:
         return resp.json()
 
 
+async def list_calendars(access_token: str) -> list[dict]:
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.get(
+            f"{API}/users/me/calendarList",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        resp.raise_for_status()
+        return resp.json().get("items", [])
+
+
+async def create_calendar(access_token: str, summary: str) -> str:
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            f"{API}/calendars",
+            headers={"Authorization": f"Bearer {access_token}"},
+            json={"summary": summary},
+        )
+        resp.raise_for_status()
+        return resp.json()["id"]
+
+
+async def ensure_calendar(access_token: str, summary: str) -> str:
+    """Find a calendar by name, creating it if it doesn't exist. Returns its id."""
+    for cal in await list_calendars(access_token):
+        if cal.get("summary") == summary:
+            return cal["id"]
+    return await create_calendar(access_token, summary)
+
+
 async def push_commit_event(
     access_token: str, calendar_id: str, title: str, when: datetime, description: str
 ) -> dict:

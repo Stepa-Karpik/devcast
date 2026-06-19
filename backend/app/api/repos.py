@@ -44,6 +44,8 @@ async def create_repo(
         installation_id=body.installation_id,
         branches=body.branches or ["main"],
         sync_frequency=body.sync_frequency,
+        tracking_mode=body.tracking_mode,
+        summary_depth=body.summary_depth,
         notion_target_id=body.notion_target_id,
         notion_target_type=body.notion_target_type,
         provider_id=body.provider_id,
@@ -52,10 +54,14 @@ async def create_repo(
     await db.commit()
     await db.refresh(repo)
 
-    # Profile "what is this project" + pull recent history in the background.
+    # Always profile "what is this project" from the full history.
     pool = await get_arq_pool()
     await pool.enqueue_job("profile_repo", str(repo.id))
-    await pool.enqueue_job("poll_repos", str(repo.id))
+    if repo.tracking_mode == "fresh":
+        # Record existing commits as a silent baseline; only humanize new ones.
+        await pool.enqueue_job("baseline_repo", str(repo.id))
+    else:
+        await pool.enqueue_job("poll_repos", str(repo.id))
     await pool.aclose()
     return repo
 

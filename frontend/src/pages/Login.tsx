@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { logos } from "../components/logos";
 
 export default function Login() {
   const { user, login, register } = useAuth();
@@ -30,9 +31,11 @@ export default function Login() {
     <div className="grid min-h-screen place-items-center p-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-[var(--color-accent)] text-2xl font-black text-white shadow-[0_12px_40px_-8px_rgba(124,92,255,.8)]">
-            D
-          </div>
+          <img
+            src={logos.devcast}
+            alt="DevCast"
+            className="mx-auto mb-4 h-16 w-16"
+          />
           <h1 className="text-2xl font-bold">DevCast</h1>
           <p className="mt-1 text-sm text-[var(--color-muted)]">
             Прямая трансляция разработки человеческим языком

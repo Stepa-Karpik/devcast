@@ -4,6 +4,7 @@ import { api, type Commit, type Repo } from "../api/client";
 import { PageHeader } from "../components/Layout";
 import { StatusBadge } from "../components/StatusBadge";
 import { CommitModal } from "../components/CommitModal";
+import { Select } from "../components/Select";
 import { useEventStream } from "../api/useEventStream";
 
 export default function Dashboard() {
@@ -41,18 +42,20 @@ export default function Dashboard() {
         title="Лента изменений"
         subtitle="Коммиты, переведённые на человеческий язык — в реальном времени"
         action={
-          <select
-            className="input max-w-xs"
-            value={repoFilter}
-            onChange={(e) => setRepoFilter(e.target.value)}
-          >
-            <option value="">Все репозитории</option>
-            {repos.data?.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.github_full_name}
-              </option>
-            ))}
-          </select>
+          <div className="w-64">
+            <Select
+              options={[
+                { value: "", label: "Все репозитории" },
+                ...(repos.data?.map((r) => ({
+                  value: r.id,
+                  label: r.github_full_name,
+                })) || []),
+              ]}
+              value={repoFilter}
+              onChange={setRepoFilter}
+              searchable
+            />
+          </div>
         }
       />
 

@@ -4,12 +4,12 @@ import httpx
 
 from app.services.llm.base import (
     PROJECT_SYSTEM,
-    SUMMARY_SYSTEM,
     ProjectInfo,
     Summary,
     build_summary_prompt,
     parse_project,
     parse_summary,
+    summary_system,
 )
 from app.services.llm.registry import CATALOG
 
@@ -42,10 +42,10 @@ class OpenAICompatClient:
         return data["choices"][0]["message"]["content"]
 
     async def summarize_diff(
-        self, diff: str, project_summary: str | None, message: str
+        self, diff: str, project_summary: str | None, message: str, depth: str = "technical"
     ) -> Summary:
         text = await self._chat(
-            SUMMARY_SYSTEM, build_summary_prompt(diff, project_summary, message)
+            summary_system(depth), build_summary_prompt(diff, project_summary, message)
         )
         return parse_summary(text, fallback_headline=message)
 

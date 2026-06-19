@@ -121,6 +121,18 @@ async def github_repos(
     return repos
 
 
+@router.get("/github/branches")
+async def github_branches(
+    full_name: str,
+    installation_id: str,
+    user: User = Depends(get_current_user),
+):
+    try:
+        return await github_app.list_branches(installation_id, full_name)
+    except Exception:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Could not list branches")
+
+
 # ---------- Notion (OAuth) ----------
 
 

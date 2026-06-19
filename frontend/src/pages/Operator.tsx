@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type CatalogEntry, type Provider } from "../api/client";
 import { PageHeader } from "../components/Layout";
+import { Select } from "../components/Select";
 
 export default function Operator() {
   const qc = useQueryClient();
@@ -80,17 +81,13 @@ function ProviderCard({
       </div>
 
       <label className="label">Модель</label>
-      <select
-        className="input mb-3"
-        value={model}
-        onChange={(e) => setModel(e.target.value)}
-      >
-        {entry.models.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.label}
-          </option>
-        ))}
-      </select>
+      <div className="mb-3">
+        <Select
+          options={entry.models.map((m) => ({ value: m.id, label: m.label }))}
+          value={model}
+          onChange={setModel}
+        />
+      </div>
 
       <label className="label">API-ключ {configured && "(оставьте пустым, чтобы не менять)"}</label>
       <input

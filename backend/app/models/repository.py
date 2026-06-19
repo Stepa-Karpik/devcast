@@ -23,6 +23,10 @@ class Repository(Base, TimestampMixin):
     installation_id: Mapped[str | None] = mapped_column(default=None)
     branches: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
     sync_frequency: Mapped[str] = mapped_column(default="realtime")
+    # "all" = humanize every commit; "fresh" = only commits added after connecting.
+    tracking_mode: Mapped[str] = mapped_column(default="all")
+    # "full" = everything (ports, filenames); "technical" = dev-relevant; "simple" = non-technical.
+    summary_depth: Mapped[str] = mapped_column(default="technical")
     notion_target_id: Mapped[str | None] = mapped_column(default=None)  # page or db id
     notion_target_type: Mapped[str | None] = mapped_column(default=None)  # "page" | "database"
     provider_id: Mapped[uuid.UUID | None] = mapped_column(

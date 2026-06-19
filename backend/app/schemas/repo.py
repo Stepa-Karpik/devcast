@@ -10,6 +10,8 @@ class RepoCreateIn(BaseModel):
     installation_id: str | None = None
     branches: list[str] = ["main"]
     sync_frequency: str = "realtime"
+    tracking_mode: str = "all"
+    summary_depth: str = "technical"
     notion_target_id: str | None = None
     notion_target_type: str | None = None
     provider_id: uuid.UUID | None = None
@@ -18,6 +20,8 @@ class RepoCreateIn(BaseModel):
 class RepoUpdateIn(BaseModel):
     branches: list[str] | None = None
     sync_frequency: str | None = None
+    tracking_mode: str | None = None
+    summary_depth: str | None = None
     notion_target_id: str | None = None
     notion_target_type: str | None = None
     provider_id: uuid.UUID | None = None
@@ -37,6 +41,8 @@ class RepoOut(BaseModel):
     installation_id: str | None = None
     branches: list[str]
     sync_frequency: str
+    tracking_mode: str
+    summary_depth: str
     notion_target_id: str | None = None
     notion_target_type: str | None = None
     provider_id: uuid.UUID | None = None

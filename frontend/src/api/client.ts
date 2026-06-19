@@ -70,6 +70,8 @@ export interface Repo {
   installation_id: string | null;
   branches: string[];
   sync_frequency: string;
+  tracking_mode: string;
+  summary_depth: string;
   notion_target_id: string | null;
   notion_target_type: string | null;
   provider_id: string | null;

@@ -92,6 +92,66 @@ class NotionClient:
             "PATCH", f"/blocks/{block_id}/children", json={"children": children}
         )
 
+    async def find_child_database(self, page_id: str, title: str) -> str | None:
+        """Find a child database with the given title directly under a page."""
+        cursor = None
+        while True:
+            params = {"page_size": 100}
+            if cursor:
+                params["start_cursor"] = cursor
+            data = await self._request(
+                "GET", f"/blocks/{page_id}/children", params=params
+            )
+            for block in data.get("results", []):
+                if block.get("type") == "child_database":
+                    if block["child_database"].get("title") == title:
+                        return block["id"]
+            if not data.get("has_more"):
+                return None
+            cursor = data.get("next_cursor")
+
+    async def create_changelog_database(self, page_id: str, title: str) -> str:
+        """Create the 'Карта разработки' database on a page: Обновление / Дата / Изменения."""
+        data = await self._request(
+            "POST",
+            "/databases",
+            json={
+                "parent": {"type": "page_id", "page_id": page_id},
+                "title": [{"type": "text", "text": {"content": title}}],
+                "properties": {
+                    "Обновление": {"title": {}},
+                    "Дата": {"date": {}},
+                    "Изменения": {"rich_text": {}},
+                },
+            },
+        )
+        return data["id"]
+
+    async def ensure_changelog_database(self, page_id: str) -> str:
+        existing = await self.find_child_database(page_id, CHANGELOG_DB_TITLE)
+        if existing:
+            return existing
+        return await self.create_changelog_database(page_id, CHANGELOG_DB_TITLE)
+
+    async def add_changelog_row(
+        self, database_id: str, headline: str, when: datetime | None, bullets: list[str]
+    ) -> dict:
+        date_value = {"start": when.isoformat()} if when else None
+        return await self._request(
+            "POST",
+            "/pages",
+            json={
+                "parent": {"database_id": database_id},
+                "properties": {
+                    "Обновление": {"title": [{"text": {"content": headline[:200]}}]},
+                    "Дата": {"date": date_value},
+                    "Изменения": {
+                        "rich_text": [{"text": {"content": _changelog_text(bullets)}}]
+                    },
+                },
+            },
+        )
+
     async def query_database_tasks(self, database_id: str) -> list[dict]:
         """Return [{id, title, key}] for rows in a database — used by the matcher."""
         data = await self._request(
@@ -126,6 +186,15 @@ class NotionClient:
                 "children": children,
             },
         )
+
+
+CHANGELOG_DB_TITLE = "Карта разработки"
+
+
+def _changelog_text(bullets: list[str]) -> str:
+    if not bullets:
+        return "—"
+    return "\n".join(f"• {b}" for b in bullets)[:1900]
 
 
 def _extract_title(result: dict) -> str:

@@ -23,15 +23,19 @@ async def calendar_commits(
     user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """Commit activity grouped by day for the in-app calendar view."""
-    repo_ids = list(
-        await db.scalars(select(Repository.id).where(Repository.user_id == user.id))
+    repos = list(
+        await db.scalars(select(Repository).where(Repository.user_id == user.id))
     )
-    if not repo_ids:
+    if not repos:
         return []
+    repo_name = {r.id: r.github_full_name for r in repos}
     commits = list(
         await db.scalars(
             select(Commit)
-            .where(Commit.repository_id.in_(repo_ids), Commit.committed_at.isnot(None))
+            .where(
+                Commit.repository_id.in_(list(repo_name.keys())),
+                Commit.committed_at.isnot(None),
+            )
             .order_by(Commit.committed_at)
         )
     )
@@ -42,6 +46,7 @@ async def calendar_commits(
             {
                 "id": str(c.id),
                 "sha": c.sha[:7],
+                "repo": repo_name.get(c.repository_id, ""),
                 "message": c.message.splitlines()[0] if c.message else "",
                 "time": c.committed_at.isoformat(),
             }

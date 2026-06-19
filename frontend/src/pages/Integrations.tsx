@@ -1,7 +1,7 @@
-import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type Integration } from "../api/client";
 import { PageHeader } from "../components/Layout";
+import { logos } from "../components/logos";
 
 export default function Integrations() {
   const qc = useQueryClient();
@@ -10,18 +10,20 @@ export default function Integrations() {
     queryFn: async () => (await api.get<Integration[]>("/api/integrations")).data,
   });
   const has = (kind: string) => integrations.data?.some((i) => i.kind === kind);
+  const meta = (kind: string) =>
+    integrations.data?.find((i) => i.kind === kind)?.meta || {};
 
   return (
     <div>
       <PageHeader
         title="Интеграции"
-        subtitle="Подключите источники данных: GitHub для коммитов, Notion для роадмапа, Google Calendar для активности"
+        subtitle="Подключите источники: GitHub для коммитов, Notion для роадмапа, Google Calendar для активности"
       />
       <div className="grid gap-4 md:grid-cols-3">
         <GitHubCard connected={!!has("github")} />
         <NotionCard
           connected={!!has("notion")}
-          onChange={() => qc.invalidateQueries({ queryKey: ["integrations"] })}
+          workspace={meta("notion").workspace_name}
         />
         <GoogleCard connected={!!has("google")} />
       </div>
@@ -29,17 +31,29 @@ export default function Integrations() {
   );
 }
 
-function Shell({
-  icon,
+function Card({
+  logo,
   title,
   desc,
   connected,
-  children,
-}: any) {
+  badge,
+  onClick,
+  cta,
+}: {
+  logo: string;
+  title: string;
+  desc: string;
+  connected: boolean;
+  badge?: string;
+  onClick: () => void;
+  cta: string;
+}) {
   return (
     <div className="card flex flex-col p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="text-3xl">{icon}</div>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="grid h-12 w-12 place-items-center rounded-xl bg-[var(--color-panel-2)]">
+          <img src={logo} alt={title} className="h-7 w-7 object-contain" />
+        </div>
         {connected ? (
           <span className="badge bg-emerald-500/15 text-emerald-300">подключено</span>
         ) : (
@@ -48,7 +62,12 @@ function Shell({
       </div>
       <h3 className="font-semibold">{title}</h3>
       <p className="mt-1 mb-4 flex-1 text-sm text-[var(--color-muted)]">{desc}</p>
-      {children}
+      {badge && (
+        <div className="mb-3 truncate text-xs text-[var(--color-accent-2)]">{badge}</div>
+      )}
+      <button onClick={onClick} className="btn-ghost w-full">
+        {cta}
+      </button>
     </div>
   );
 }
@@ -62,29 +81,24 @@ function GitHubCard({ connected }: { connected: boolean }) {
       alert(e.response?.data?.detail || "GitHub App не сконфигурирован на сервере"),
   });
   return (
-    <Shell
-      icon="🐙"
+    <Card
+      logo={logos.github}
       title="GitHub"
       desc="Установите GitHub App, чтобы получать коммиты через webhooks и читать диффы."
       connected={connected}
-    >
-      <button onClick={() => connect.mutate()} className="btn-primary w-full">
-        {connected ? "Переустановить App" : "Установить GitHub App"}
-      </button>
-    </Shell>
+      onClick={() => connect.mutate()}
+      cta={connected ? "Переустановить App" : "Установить GitHub App"}
+    />
   );
 }
 
 function NotionCard({
   connected,
-  onChange,
+  workspace,
 }: {
   connected: boolean;
-  onChange: () => void;
+  workspace?: string;
 }) {
-  const [showToken, setShowToken] = useState(false);
-  const [token, setToken] = useState("");
-
   const connect = useMutation({
     mutationFn: async () =>
       (await api.get<{ url: string }>("/api/integrations/notion/oauth/url")).data,
@@ -92,54 +106,16 @@ function NotionCard({
     onError: (e: any) =>
       alert(e.response?.data?.detail || "Notion OAuth не сконфигурирован на сервере"),
   });
-
-  const saveToken = useMutation({
-    mutationFn: async () =>
-      (await api.post("/api/integrations/notion", { token })).data,
-    onSuccess: () => {
-      setToken("");
-      setShowToken(false);
-      onChange();
-    },
-    onError: () => alert("Неверный Notion-токен"),
-  });
-
   return (
-    <Shell
-      icon="📝"
+    <Card
+      logo={logos.notion}
       title="Notion"
       desc="Авторизуйтесь через Notion — выберите свой workspace и страницы. Без вставки токенов."
       connected={connected}
-    >
-      <button onClick={() => connect.mutate()} className="btn-primary w-full">
-        {connected ? "Переподключить Notion" : "Подключить Notion"}
-      </button>
-
-      <button
-        onClick={() => setShowToken((v) => !v)}
-        className="mt-2 text-xs text-[var(--color-muted)] hover:text-slate-300"
-      >
-        {showToken ? "Скрыть" : "Или вставить internal token (для разработки)"}
-      </button>
-      {showToken && (
-        <div className="mt-2">
-          <input
-            className="input mb-2"
-            type="password"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="secret_…"
-          />
-          <button
-            disabled={!token || saveToken.isPending}
-            onClick={() => saveToken.mutate()}
-            className="btn-ghost w-full"
-          >
-            Сохранить токен
-          </button>
-        </div>
-      )}
-    </Shell>
+      badge={connected && workspace ? `workspace: ${workspace}` : undefined}
+      onClick={() => connect.mutate()}
+      cta={connected ? "Переподключить Notion" : "Подключить Notion"}
+    />
   );
 }
 
@@ -152,15 +128,13 @@ function GoogleCard({ connected }: { connected: boolean }) {
       alert(e.response?.data?.detail || "Google не сконфигурирован на сервере"),
   });
   return (
-    <Shell
-      icon="🗓️"
+    <Card
+      logo={logos.google}
       title="Google Calendar"
-      desc="Необязательно. Пуш коммитов в отдельный календарь активности проекта."
+      desc="Коммиты попадают в отдельный календарь «Инновиум»: заголовок, ссылка на репозиторий и описание."
       connected={connected}
-    >
-      <button onClick={() => connect.mutate()} className="btn-ghost w-full">
-        {connected ? "Переподключить" : "Подключить Google"}
-      </button>
-    </Shell>
+      onClick={() => connect.mutate()}
+      cta={connected ? "Переподключить" : "Подключить Google"}
+    />
   );
 }

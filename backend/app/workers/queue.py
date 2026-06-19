@@ -21,6 +21,7 @@ class WorkerSettings:
         tasks.process_commit,
         tasks.profile_repo,
         tasks.poll_repos,
+        tasks.baseline_repo,
         tasks.sync_daily_digest,
         tasks.sync_weekly_digest,
     ]

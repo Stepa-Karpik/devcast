@@ -23,6 +23,18 @@ async def get_integration_credentials(
     return decrypt_json(row.encrypted_credentials)
 
 
+async def get_google_integration(db: AsyncSession, user_id: uuid.UUID) -> Integration | None:
+    return await db.scalar(
+        select(Integration).where(
+            Integration.user_id == user_id, Integration.kind == "google"
+        )
+    )
+
+
+async def get_google_credentials(db: AsyncSession, user_id: uuid.UUID) -> dict | None:
+    return await get_integration_credentials(db, user_id, "google")
+
+
 async def get_notion_token(db: AsyncSession, user_id: uuid.UUID) -> str | None:
     creds = await get_integration_credentials(db, user_id, "notion")
     if creds and creds.get("token"):
