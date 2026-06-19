@@ -123,7 +123,8 @@ export function CommitModal({
           )}
           {commit.status === "processed" &&
             !commit.synced_to_notion &&
-            repoHasNotion && (
+            repoHasNotion &&
+            (c?.bullets?.length ?? 0) > 0 && (
               <button
                 disabled={sendNotion.isPending}
                 onClick={() => sendNotion.mutate()}

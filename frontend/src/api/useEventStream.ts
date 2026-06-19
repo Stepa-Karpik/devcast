@@ -18,6 +18,7 @@ export function useEventStream(onEvent: (e: any) => void) {
     };
     es.addEventListener("commit.processed", handler);
     es.addEventListener("commit.failed", handler);
+    es.addEventListener("commit.synced", handler);
     es.onerror = () => {
       /* EventSource auto-reconnects */
     };

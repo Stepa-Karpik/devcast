@@ -86,6 +86,9 @@ async def process_commit(ctx, commit_id: str, distribute: bool = True) -> None:
             change.provider = provider
             change.model = model
             commit.status = "processed"
+            if not distribute:
+                # Manual humanize never sends to Notion — keep the badge honest.
+                commit.synced_to_notion = False
             await db.commit()
 
             if distribute:
@@ -186,9 +189,8 @@ async def _sync_commit_to_notion(
         return
     bullets = change.bullets or []
     if not bullets:
-        # Nothing worth mirroring (e.g. "simple" depth on a purely technical commit).
-        commit.synced_to_notion = True
-        await db.commit()
+        # Nothing to mirror (e.g. "simple" depth on a purely technical commit).
+        # Leave it OUT of Notion so the badge truthfully shows "не в Notion".
         return
     token = await get_notion_token(db, repo.user_id)
     if not token:
@@ -405,5 +407,6 @@ async def sync_notion_digest(ctx, frequency: str) -> None:
                         commit.committed_at,
                         bullets,
                     )
-                commit.synced_to_notion = True
+                    # Only mark synced when a row was actually written.
+                    commit.synced_to_notion = True
             await db.commit()
